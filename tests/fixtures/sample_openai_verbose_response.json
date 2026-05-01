@@ -1,0 +1,32 @@
+{
+  "task": "transcribe",
+  "language": "english",
+  "duration": 12.5,
+  "text": "Hello world. This is a sample transcript for testing.",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0.0,
+      "end": 4.0,
+      "text": " Hello world.",
+      "tokens": [50364, 1234, 5678, 50500],
+      "temperature": 0.0,
+      "avg_logprob": -0.2,
+      "compression_ratio": 1.1,
+      "no_speech_prob": 0.01
+    },
+    {
+      "id": 1,
+      "seek": 0,
+      "start": 4.0,
+      "end": 12.5,
+      "text": " This is a sample transcript for testing.",
+      "tokens": [50500, 9000, 1234, 50764],
+      "temperature": 0.0,
+      "avg_logprob": -0.7,
+      "compression_ratio": 1.4,
+      "no_speech_prob": 0.05
+    }
+  ]
+}
