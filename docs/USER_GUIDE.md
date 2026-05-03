@@ -46,6 +46,16 @@ sudo apt update
 sudo apt install ffmpeg
 ```
 
+On Amazon Linux 2023 (EPEL does not work; use the static binary):
+
+```bash
+wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+tar -xf ffmpeg-release-amd64-static.tar.xz
+sudo cp ffmpeg-*-amd64-static/ffmpeg /usr/local/bin/
+sudo cp ffmpeg-*-amd64-static/ffprobe /usr/local/bin/
+rm -rf ffmpeg-*-amd64-static* ffmpeg-release-amd64-static.tar.xz
+```
+
 ## 2. Create your `.env` file
 
 Copy the example file:
@@ -67,6 +77,43 @@ streamlit run app.py
 ```
 
 The app should open in your browser.
+
+---
+
+# Accessing the deployed app
+
+If TranscriptWorkbench has been deployed to EC2 (see `docs/DEPLOYMENT.md`), you access it
+through a browser rather than running it locally.
+
+## URL
+
+- **With custom domain:** `https://your-domain.com`
+- **Without custom domain:** `http://<EC2_PUBLIC_IP>:8501`
+
+## Providing your API key
+
+The deployed app uses the `OPENAI_API_KEY` configured on the server. If you are running a
+personal deployment and need to override it temporarily, use the **sidebar key override**:
+
+1. Open the sidebar (click **>** in the top-left corner if collapsed)
+2. Paste your key into the **"Override key"** field
+3. The override is session-only and is never stored on the server
+
+## File uploads on EC2
+
+Large file uploads are governed by the `MAX_UPLOAD_MB` setting in `.env` on the server.
+The default on a t2.micro deployment is set to `50 MB` to avoid memory pressure. To raise it,
+update `.env` on the server and restart the service:
+
+```bash
+sudo systemctl restart transcript-workbench
+```
+
+## Transcript data persistence
+
+All jobs, SQLite records, and exported files live in the `data/` directory on the EC2 instance.
+They persist across app restarts. They are not backed up automatically — consider periodic
+snapshots of the EBS volume or syncing `data/` to S3 if the transcripts matter long-term.
 
 ---
 

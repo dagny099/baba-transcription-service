@@ -236,18 +236,23 @@ The schema should allow partial data. For example, an OpenAI run may produce a s
 
 ## Planned repository structure
 
-The implementation plan recommends this structure:
+The actual repository structure:
 
 ```text
-transcript-workbench/
+baba-transcription-service/
   app.py
   README.md
-  REQUIREMENTS.md
-  IMPLEMENTATION_PLAN.md
-  USER_GUIDE.md
   .env.example
   .gitignore
   requirements.txt
+
+  docs/
+    REQUIREMENTS.md
+    IMPLEMENTATION_PLAN.md
+    USER_GUIDE.md
+    UAT_CHECKLIST.md
+    AWS_TRANSCRIBE_SETUP.md
+    DEPLOYMENT.md
 
   transcript_workbench/
     config.py
@@ -266,6 +271,7 @@ transcript-workbench/
       base.py
       factory.py
       registry.py
+      pricing.py           ← cost estimation (duration × published rate per provider/model)
       openai_provider.py
       aws_provider.py
       faster_whisper_provider.py
@@ -295,7 +301,10 @@ transcript-workbench/
     test_exports.py
     test_sqlite_repository.py
     test_openai_parser.py
+    test_pricing.py
     fixtures/
+      sample_openai_verbose_response.json
+      sample_openai_simple_response.json
 
   data/
     .gitkeep
@@ -407,15 +416,16 @@ The dates above are placeholders for sequencing. They are not a commitment to a 
 
 ## Documentation map
 
-This project includes three companion documents:
-
 | Document | Purpose |
 |---|---|
-| [`REQUIREMENTS.md`](REQUIREMENTS.md) | Functional and non-functional requirements for the MVP and near-term roadmap |
-| [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | Technical architecture, module structure, schemas, service boundaries, and implementation milestones |
-| [`USER_GUIDE.md`](USER_GUIDE.md) | Progressive user-facing instructions for running and using the app |
+| [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | Functional and non-functional requirements for the MVP and near-term roadmap |
+| [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | Technical architecture, module structure, schemas, service boundaries, and implementation milestones |
+| [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) | User-facing instructions for running and using the app locally and on EC2 |
+| [`docs/UAT_CHECKLIST.md`](docs/UAT_CHECKLIST.md) | Step-by-step user acceptance test plan for the MVP |
+| [`docs/AWS_TRANSCRIBE_SETUP.md`](docs/AWS_TRANSCRIBE_SETUP.md) | AWS IAM, S3, and Transcribe setup for the post-MVP provider |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | EC2 deployment guide including custom domain and HTTPS |
 
-Start with `REQUIREMENTS.md` to understand what the app must do. Use `IMPLEMENTATION_PLAN.md` when building. Use `USER_GUIDE.md` to keep the actual user experience clear as the app evolves.
+Start with `REQUIREMENTS.md` to understand what the app must do. Use `IMPLEMENTATION_PLAN.md` when building. Use `USER_GUIDE.md` for the end-user experience. Use `DEPLOYMENT.md` for EC2 setup.
 
 ---
 
@@ -529,7 +539,8 @@ Common options:
 - [x] SQLite schema implemented
 - [x] OpenAI provider implemented
 - [x] Export service implemented
-- [ ] AWS provider implemented (registry entry only)
-- [ ] Local faster-whisper provider implemented (registry entry only)
-- [ ] EC2 deployment documented
+- [x] AWS provider implemented (adapter complete; blocked pending AWS account upgrade — see `docs/AWS_TRANSCRIBE_SETUP.md`)
+- [x] Local faster-whisper provider implemented (adapter complete; functional testing pending)
+- [x] Cost estimation service implemented (`providers/pricing.py`)
+- [x] EC2 deployment documented (see `docs/DEPLOYMENT.md`)
 

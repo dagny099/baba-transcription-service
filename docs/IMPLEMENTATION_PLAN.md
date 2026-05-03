@@ -58,15 +58,20 @@ It should orchestrate UI sections and call services, but it should not contain:
 # Recommended repository structure
 
 ```text
-transcript-workbench/
+baba-transcription-service/
   app.py
   README.md
-  REQUIREMENTS.md
-  IMPLEMENTATION_PLAN.md
-  USER_GUIDE.md
   .env.example
   .gitignore
   requirements.txt
+
+  docs/
+    REQUIREMENTS.md
+    IMPLEMENTATION_PLAN.md
+    USER_GUIDE.md
+    UAT_CHECKLIST.md
+    AWS_TRANSCRIBE_SETUP.md
+    DEPLOYMENT.md
 
   transcript_workbench/
     __init__.py
@@ -89,6 +94,7 @@ transcript-workbench/
       base.py
       factory.py
       registry.py
+      pricing.py           ← cost estimation; see providers/pricing.py
       openai_provider.py
       aws_provider.py
       faster_whisper_provider.py
@@ -121,9 +127,10 @@ transcript-workbench/
     test_exports.py
     test_sqlite_repository.py
     test_openai_parser.py
+    test_pricing.py
     fixtures/
-      sample_openai_response.json
-      sample_aws_response.json
+      sample_openai_verbose_response.json
+      sample_openai_simple_response.json
 
   data/
     .gitkeep
@@ -1178,22 +1185,22 @@ Acceptance:
 
 ---
 
-# Deployment notes for later EC2 version
+# Deployment notes
+
+See `docs/DEPLOYMENT.md` for the full step-by-step EC2 guide, including custom domain and HTTPS.
 
 Recommended path:
 
 1. Clone repo on EC2.
-2. Create virtual environment.
-3. Install dependencies.
-4. Install `ffmpeg`.
+2. Add swap space (required — deps exceed 1 GB RAM on t2.micro).
+3. Install ffmpeg via static binary (EPEL does not work on Amazon Linux 2023).
+4. Create a Python 3.12 virtual environment and install dependencies.
 5. Configure `.env`.
-6. Run Streamlit on localhost, for example port `8501`.
-7. Put Nginx in front.
-8. Add HTTPS with Certbot.
-9. Use systemd to keep app running.
-10. Add access controls before exposing publicly.
+6. Run Streamlit behind systemd.
+7. Put Nginx in front for custom domain and HTTPS via Certbot.
+8. Use an EC2 IAM role for AWS Transcribe credentials — do not store access keys on the server.
 
-Example systemd service:
+Example systemd service (Nginx in front — Streamlit binds to localhost only):
 
 ```ini
 [Unit]
@@ -1201,15 +1208,23 @@ Description=TranscriptWorkbench Streamlit App
 After=network.target
 
 [Service]
+Type=simple
 User=ec2-user
-WorkingDirectory=/home/ec2-user/transcript-workbench
-Environment="PATH=/home/ec2-user/transcript-workbench/.venv/bin"
-ExecStart=/home/ec2-user/transcript-workbench/.venv/bin/streamlit run app.py --server.port 8501 --server.address 127.0.0.1
+WorkingDirectory=/home/ec2-user/baba-transcription-service
+EnvironmentFile=/home/ec2-user/baba-transcription-service/.env
+ExecStart=/home/ec2-user/baba-transcription-service/.venv/bin/streamlit run app.py \
+    --server.port 8501 \
+    --server.address 127.0.0.1 \
+    --server.headless true
 Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+> `--server.address 127.0.0.1` requires Nginx in front. Use `0.0.0.0` for direct access
+> during initial testing (Step 8 in `docs/DEPLOYMENT.md`) before Nginx is configured.
 
 ---
 
