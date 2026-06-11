@@ -239,7 +239,7 @@ The schema should allow partial data. For example, an OpenAI run may produce a s
 The actual repository structure:
 
 ```text
-baba-transcription-service/
+baba-transcription-utility/         # local checkout name; GitHub remote is `baba-transcription-service`
   app.py
   README.md
   .env.example

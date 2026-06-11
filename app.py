@@ -13,6 +13,7 @@ from transcript_workbench.config import get_config
 from transcript_workbench.db.connection import initialize_database
 from transcript_workbench.services.audio import has_ffmpeg, has_ffprobe
 from transcript_workbench.services.transcription import run_transcription
+from transcript_workbench.ui.compression import render_compression_panel
 from transcript_workbench.ui.configuration import render_configuration_section
 from transcript_workbench.ui.history import render_history_tab
 from transcript_workbench.ui.results import render_results
@@ -73,23 +74,24 @@ def main() -> None:
     st.title("TranscriptWorkbench")
     st.caption("Upload an audio/video file, choose a provider, and transcribe.")
 
-    uploaded_file = render_upload_section()
+    uploaded_file = render_upload_section(max_upload_mb=config.max_upload_mb)
     provider, model, requested = render_configuration_section(config, uploaded_file)
+    transcription_source = render_compression_panel(uploaded_file, provider=provider)
 
     st.subheader("3 · Run")
     run_clicked = st.button(
         "Run transcription",
         type="primary",
-        disabled=uploaded_file is None,
+        disabled=transcription_source is None,
     )
 
-    if run_clicked and uploaded_file is not None:
+    if run_clicked and transcription_source is not None:
         with st.status("Running transcription...", expanded=True) as status:
             status.write(f"Provider: **{provider}**, model: **{model}**")
             status.write("Saving upload, inspecting audio, and calling provider...")
             report = run_transcription(
-                uploaded_file=uploaded_file,
-                original_filename=uploaded_file.name,
+                uploaded_file=transcription_source,
+                original_filename=transcription_source.name,
                 provider_name=provider,
                 model=model,
                 requested_features=requested,

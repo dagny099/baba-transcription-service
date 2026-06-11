@@ -99,9 +99,12 @@ cd baba-transcription-service
 
 ```bash
 # Run this on your Mac, not on EC2
-scp -i your-key.pem -r /Users/bhs/PROJECTS/baba-transcription-service \
+scp -i your-key.pem -r /Users/bhs/PROJECTS/baba-transcription-utility \
     ec2-user@<YOUR_EC2_PUBLIC_IP>:~/baba-transcription-service
 ```
+
+> The local directory is `baba-transcription-utility`; the remote target keeps the GitHub
+> repo name (`baba-transcription-service`) so all paths below match the `git clone` flow.
 
 ---
 
@@ -133,10 +136,15 @@ Minimum required values for the OpenAI-only deployment:
 ```bash
 OPENAI_API_KEY=sk-...
 TRANSCRIPT_WORKBENCH_DATA_DIR=./data
-MAX_UPLOAD_MB=50          # lower on t2.micro to reduce memory pressure
+MAX_UPLOAD_MB=50          # lower on t2.micro to reduce memory pressure; raise if you have headroom
 DEFAULT_PROVIDER=openai
 DEFAULT_MODEL=gpt-4o-mini-transcribe
 ```
+
+> **Note:** `MAX_UPLOAD_MB` is enforced in the Streamlit UI (the uploader shows an error if
+> the file exceeds it) and is also passed to Streamlit's `--server.maxUploadSize` via the
+> systemd unit below. If you raise it, make sure the matching `client_max_body_size` in the
+> Nginx config (Step 10d) is at least as large.
 
 Leave AWS variables empty until the AWS Transcribe milestone is ready.
 
@@ -179,7 +187,8 @@ EnvironmentFile=/home/ec2-user/baba-transcription-service/.env
 ExecStart=/home/ec2-user/baba-transcription-service/.venv/bin/streamlit run app.py \
     --server.port 8501 \
     --server.address 0.0.0.0 \
-    --server.headless true
+    --server.headless true \
+    --server.maxUploadSize ${MAX_UPLOAD_MB}
 Restart=always
 RestartSec=5
 
@@ -248,6 +257,13 @@ server {
     listen 80;
     server_name your-domain.com;
 
+    # Allow large uploads. Must be >= MAX_UPLOAD_MB in .env.
+    # Nginx's default is 1m, which causes 413 errors on any non-trivial audio file.
+    client_max_body_size 200M;
+    # Stream request bodies straight to Streamlit instead of buffering the full upload
+    # to disk first — important on small EC2 instances and for snappier uploads.
+    proxy_request_buffering off;
+
     location / {
         proxy_pass http://localhost:8501;
         proxy_http_version 1.1;
@@ -259,6 +275,11 @@ server {
     }
 }
 ```
+
+> **If you raise or lower `client_max_body_size`, change `MAX_UPLOAD_MB` in `.env` to match**
+> (and restart the systemd service so Streamlit picks up the new `--server.maxUploadSize`).
+> If they drift apart, you'll get confusing errors — Nginx 413 at one ceiling, a Streamlit
+> "file too large" toast at another.
 
 Test and reload:
 

@@ -43,3 +43,9 @@ ARTIFACT_MD = "md"
 ARTIFACT_JSON = "json"
 ARTIFACT_RAW = "raw"
 ARTIFACT_INPUT = "input"
+
+# Per-provider hard file-size caps enforced at the provider API level.
+# Used to decide whether to offer in-app compression before submission.
+PROVIDER_MAX_UPLOAD_MB: dict[str, int] = {
+    "openai": 25,
+}
