@@ -13,7 +13,7 @@ from transcript_workbench.config import get_config
 from transcript_workbench.db.connection import initialize_database
 from transcript_workbench.services.audio import has_ffmpeg, has_ffprobe
 from transcript_workbench.services.transcription import run_transcription
-from transcript_workbench.ui.compression import render_compression_panel
+from transcript_workbench.ui.compression import CompressedSource, render_compression_panel
 from transcript_workbench.ui.configuration import render_configuration_section
 from transcript_workbench.ui.history import render_history_tab
 from transcript_workbench.ui.results import render_results
@@ -102,6 +102,15 @@ def main() -> None:
             else:
                 status.update(label="Transcription complete", state="complete")
         st.session_state["latest_report"] = report
+        if isinstance(transcription_source, CompressedSource):
+            st.session_state["latest_compressed"] = {
+                "data": bytes(transcription_source.getbuffer()),
+                "name": transcription_source.name,
+                "size": transcription_source.size,
+                "mime": transcription_source.type,
+            }
+        else:
+            st.session_state.pop("latest_compressed", None)
 
     st.markdown("---")
     st.subheader("Results")

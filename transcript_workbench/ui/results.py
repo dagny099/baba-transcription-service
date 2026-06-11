@@ -204,9 +204,6 @@ def _render_raw_tab(result: Any) -> None:
 def _render_downloads_tab(result: Any) -> None:
     st.subheader("Downloads")
     artifacts = result.artifacts or {}
-    if not artifacts:
-        st.info("No exports were generated.")
-        return
 
     label_map = {
         "txt": ("Plain text (.txt)", "transcript.txt", "text/plain"),
@@ -230,3 +227,21 @@ def _render_downloads_tab(result: Any) -> None:
             mime=mime,
             key=f"download-{atype}-{result.job.job_id}",
         )
+
+    # Compressed-audio download, if this run used in-app compression.
+    # Bytes live in session_state and disappear when the tab is closed —
+    # disk is precious on small instances so we don't persist them.
+    compressed = st.session_state.get("latest_compressed")
+    if compressed:
+        size_mb = compressed["size"] / (1024 * 1024)
+        st.download_button(
+            label=f"Download compressed audio (.mp3, {size_mb:.1f} MB)",
+            data=compressed["data"],
+            file_name=compressed["name"],
+            mime=compressed["mime"],
+            key=f"download-compressed-{result.job.job_id}",
+            help="Only available for this session. Save it now if you want to keep it.",
+        )
+
+    if not artifacts and not compressed:
+        st.info("No exports were generated.")

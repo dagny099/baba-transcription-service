@@ -42,6 +42,14 @@ def _provider_cap_mb(provider: str | None) -> int:
     return _DEFAULT_PROVIDER_CAP_MB
 
 
+def _estimate_compress_seconds(input_size_mb: float) -> str:
+    """Rough human-readable range. Tuned for t2.micro-ish: ~1s per 2 MB of
+    input for typical audio/video, with a generous spread to set expectations."""
+    low = max(5, int(input_size_mb * 0.4))
+    high = max(low + 5, int(input_size_mb * 1.5))
+    return f"{low}–{high}s"
+
+
 def render_compression_panel(
     uploaded_file: Any,
     provider: str | None = None,
@@ -94,8 +102,18 @@ def render_compression_panel(
         state = None
 
     if state is None:
+        st.caption(
+            "What this changes: drops video, downmixes stereo → mono, "
+            "downsamples to 16 kHz, re-encodes at 64 kbps MP3. Speech models "
+            "don't benefit from higher fidelity, so transcription accuracy "
+            "stays the same."
+        )
+        st.caption(
+            f"Estimated wait: ~{_estimate_compress_seconds(file_size_mb)} "
+            "(depends on instance size and recording length)."
+        )
         if st.button("Compress audio", type="secondary"):
-            with st.spinner("Compressing with ffmpeg... (this can take 10–60s)"):
+            with st.spinner("Compressing with ffmpeg..."):
                 try:
                     result = compress_for_transcription(
                         src_bytes=bytes(uploaded_file.getbuffer()),
@@ -119,7 +137,14 @@ def render_compression_panel(
 
     cols = st.columns(3)
     cols[0].metric("Original", f"{file_size_mb:.1f} MB")
-    cols[1].metric("Compressed", f"{compressed_mb:.1f} MB", f"-{100 - pct:.0f}%")
+    # `delta_color="inverse"` flips the default: a negative delta (smaller
+    # is better here) shows green instead of red.
+    cols[1].metric(
+        "Compressed",
+        f"{compressed_mb:.1f} MB",
+        f"-{100 - pct:.0f}%",
+        delta_color="inverse",
+    )
     cols[2].metric("Format", "MP3 mono 16 kHz")
 
     st.audio(result.data, format=result.mime_type)
