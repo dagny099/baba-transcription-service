@@ -72,7 +72,10 @@ def main() -> None:
     _render_sidebar(config)
 
     st.title("TranscriptWorkbench")
-    st.caption("Upload an audio/video file, choose a provider, and transcribe.")
+    st.caption(
+        "Upload an audio/video file or record from your mic, "
+        "choose a provider, and transcribe."
+    )
 
     uploaded_file = render_upload_section(max_upload_mb=config.max_upload_mb)
     provider, model, requested = render_configuration_section(config, uploaded_file)

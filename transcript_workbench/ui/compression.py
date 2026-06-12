@@ -14,6 +14,7 @@ from transcript_workbench.services.compress import (
     CompressionResult,
     compress_for_transcription,
 )
+from transcript_workbench.ui.upload import MicSource
 
 # Fallback cap used when the chosen provider doesn't declare one.
 _DEFAULT_PROVIDER_CAP_MB = 25
@@ -74,13 +75,24 @@ def render_compression_panel(
         st.session_state.pop("_compression", None)
         return uploaded_file
 
+    is_mic = isinstance(uploaded_file, MicSource)
+
     st.subheader("Compress to fit the provider's size limit")
-    st.info(
-        f"This file is **{file_size_mb:.1f} MB**, over the **{cap_mb} MB** cap "
-        f"for the selected provider. Compress to mono 16 kHz MP3 (~64 kbps) to "
-        "bring it under the limit. Video (if any) is dropped — only the audio "
-        "is transcribed."
-    )
+    if is_mic:
+        st.info(
+            f"Mic recordings are uncompressed WAV, so they get big fast — this "
+            f"one is **{file_size_mb:.1f} MB**, over the **{cap_mb} MB** cap for "
+            "the selected provider. It will be compressed automatically to mono "
+            "16 kHz MP3; speech models don't benefit from higher fidelity, so "
+            "transcription accuracy stays the same."
+        )
+    else:
+        st.info(
+            f"This file is **{file_size_mb:.1f} MB**, over the **{cap_mb} MB** cap "
+            f"for the selected provider. Compress to mono 16 kHz MP3 (~64 kbps) to "
+            "bring it under the limit. Video (if any) is dropped — only the audio "
+            "is transcribed."
+        )
 
     if not has_ffmpeg():
         suffix = Path(uploaded_file.name).suffix or ".mp4"
@@ -102,17 +114,19 @@ def render_compression_panel(
         state = None
 
     if state is None:
-        st.caption(
-            "What this changes: drops video, downmixes stereo → mono, "
-            "downsamples to 16 kHz, re-encodes at 64 kbps MP3. Speech models "
-            "don't benefit from higher fidelity, so transcription accuracy "
-            "stays the same."
-        )
+        if not is_mic:
+            st.caption(
+                "What this changes: drops video, downmixes stereo → mono, "
+                "downsamples to 16 kHz, re-encodes at 64 kbps MP3. Speech models "
+                "don't benefit from higher fidelity, so transcription accuracy "
+                "stays the same."
+            )
         st.caption(
             f"Estimated wait: ~{_estimate_compress_seconds(file_size_mb)} "
             "(depends on instance size and recording length)."
         )
-        if st.button("Compress audio", type="secondary"):
+        # Mic recordings compress automatically; file uploads wait for a click.
+        if is_mic or st.button("Compress audio", type="secondary"):
             with st.spinner("Compressing with ffmpeg..."):
                 try:
                     result = compress_for_transcription(
