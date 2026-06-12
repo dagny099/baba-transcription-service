@@ -32,17 +32,20 @@ def render_results(report: TranscriptionRunReport, config: AppConfig) -> None:
         st.warning("No result to display.")
         return
 
-    st.success(f"Transcription completed in {report.elapsed_seconds:.1f}s.")
+    st.success(
+        f"Transcription completed in {report.elapsed_seconds:.1f}s.",
+        icon=":material/check_circle:",
+    )
 
     tabs = st.tabs(
         [
-            "Transcript",
-            "Segments",
-            "Confidence",
-            "Metadata",
-            "Raw / Debug",
-            "Downloads",
-            "History",
+            ":material/article: Transcript",
+            ":material/format_list_numbered: Segments",
+            ":material/insights: Confidence",
+            ":material/info: Metadata",
+            ":material/data_object: Raw / Debug",
+            ":material/download: Downloads",
+            ":material/history: History",
         ]
     )
 
@@ -63,7 +66,6 @@ def render_results(report: TranscriptionRunReport, config: AppConfig) -> None:
 
 
 def _render_transcript_tab(result: Any) -> None:
-    st.subheader("Transcript")
     if not result.segments:
         st.text_area("Transcript text", value=result.text or "", height=400)
         return
@@ -86,7 +88,6 @@ def _render_transcript_tab(result: Any) -> None:
 
 
 def _render_segments_tab(result: Any) -> None:
-    st.subheader("Segments")
     if not result.segments:
         st.info("This transcription returned a single text body without segments.")
         return
@@ -108,7 +109,6 @@ def _render_segments_tab(result: Any) -> None:
 
 
 def _render_confidence_tab(result: Any, config: AppConfig) -> None:
-    st.subheader("Confidence")
     summary = summarize_confidence(
         result.words, result.segments, threshold=config.low_confidence_threshold
     )
@@ -134,7 +134,6 @@ def _render_confidence_tab(result: Any, config: AppConfig) -> None:
 
 
 def _render_metadata_tab(result: Any, report: TranscriptionRunReport) -> None:
-    st.subheader("Metadata")
     job = result.job
 
     # Cost summary up top, where users will look for it.
@@ -189,7 +188,6 @@ def _render_metadata_tab(result: Any, report: TranscriptionRunReport) -> None:
 
 
 def _render_raw_tab(result: Any) -> None:
-    st.subheader("Raw / Debug")
     raw_path = result.raw_response_path
     if not raw_path or not Path(raw_path).exists():
         st.info("No raw provider response was saved for this run.")
@@ -202,7 +200,6 @@ def _render_raw_tab(result: Any) -> None:
 
 
 def _render_downloads_tab(result: Any) -> None:
-    st.subheader("Downloads")
     artifacts = result.artifacts or {}
 
     label_map = {
@@ -225,6 +222,7 @@ def _render_downloads_tab(result: Any) -> None:
             data=data,
             file_name=filename,
             mime=mime,
+            icon=":material/download:",
             key=f"download-{atype}-{result.job.job_id}",
         )
 
@@ -239,6 +237,7 @@ def _render_downloads_tab(result: Any) -> None:
             data=compressed["data"],
             file_name=compressed["name"],
             mime=compressed["mime"],
+            icon=":material/download:",
             key=f"download-compressed-{result.job.job_id}",
             help="Only available for this session. Save it now if you want to keep it.",
         )

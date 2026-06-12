@@ -77,7 +77,7 @@ def render_compression_panel(
 
     is_mic = isinstance(uploaded_file, MicSource)
 
-    st.subheader("Compress to fit the provider's size limit")
+    st.subheader("Compress to fit the provider's size limit :material/compress:")
     if is_mic:
         st.info(
             f"Mic recordings are uncompressed WAV, so they get big fast — this "
@@ -126,7 +126,9 @@ def render_compression_panel(
             "(depends on instance size and recording length)."
         )
         # Mic recordings compress automatically; file uploads wait for a click.
-        if is_mic or st.button("Compress audio", type="secondary"):
+        if is_mic or st.button(
+            "Compress audio", type="secondary", icon=":material/compress:"
+        ):
             with st.spinner("Compressing with ffmpeg..."):
                 try:
                     result = compress_for_transcription(
@@ -167,6 +169,7 @@ def render_compression_panel(
         data=result.data,
         file_name=result.suggested_filename,
         mime=result.mime_type,
+        icon=":material/download:",
     )
 
     if compressed_mb > cap_mb:

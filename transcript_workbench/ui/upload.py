@@ -59,10 +59,9 @@ def _render_file_uploader(max_upload_mb: int | None) -> Any:
     )
     if uploaded is not None:
         size_mb = (uploaded.size or 0) / (1024 * 1024)
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Filename", uploaded.name)
-        col2.metric("Size", f"{size_mb:.2f} MB")
-        col3.metric("MIME", uploaded.type or "—")
+        st.caption(
+            f"**{uploaded.name}** · {size_mb:.2f} MB · {uploaded.type or 'unknown type'}"
+        )
         st.audio(uploaded.getvalue(), format=uploaded.type or None)
         if max_upload_mb and size_mb > max_upload_mb:
             st.error(
@@ -99,8 +98,10 @@ def render_upload_section(max_upload_mb: int | None = None) -> Any:
     None when no source is ready. If both a file and a recording are
     present, a picker chooses between them (defaulting to the newest).
     """
-    st.subheader("1 · Add audio")
-    upload_tab, mic_tab = st.tabs(["📁 Upload a file", "🎙️ Record from mic"])
+    st.subheader("1 · Add audio :material/graphic_eq:")
+    upload_tab, mic_tab = st.tabs(
+        [":material/upload_file: Upload a file", ":material/mic: Record from mic"]
+    )
 
     with upload_tab:
         uploaded = _render_file_uploader(max_upload_mb)

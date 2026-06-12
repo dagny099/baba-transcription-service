@@ -37,4 +37,19 @@ def render_history_tab(config: AppConfig) -> None:
             }
         )
     df = pd.DataFrame(enriched)
-    st.dataframe(df, width="stretch", hide_index=True)
+    df["created_at"] = pd.to_datetime(df["created_at"], format="ISO8601", errors="coerce")
+    st.dataframe(
+        df,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "created_at": st.column_config.DatetimeColumn(
+                "created", format="MMM D, YYYY · HH:mm"
+            ),
+            "duration_s": st.column_config.NumberColumn(
+                "duration", format="%.1f s"
+            ),
+            "estimated_cost": st.column_config.TextColumn("est. cost"),
+            "job_id": st.column_config.TextColumn("job id", width="small"),
+        },
+    )

@@ -9,6 +9,14 @@ from typing import Any
 import streamlit as st
 
 from transcript_workbench.config import AppConfig
+from transcript_workbench.constants import (
+    FEATURE_DIAGNOSTIC,
+    FEATURE_NOT_REQUESTED,
+    FEATURE_PARTIAL,
+    FEATURE_PROXY,
+    FEATURE_SUPPORTED,
+    FEATURE_UNSUPPORTED,
+)
 from transcript_workbench.models.features import RequestedFeatures
 from transcript_workbench.providers.pricing import (
     estimate_cost,
@@ -26,6 +34,22 @@ from transcript_workbench.providers.registry import (
 from transcript_workbench.services.audio import ffprobe_metadata, has_ffprobe
 from transcript_workbench.services.feature_negotiation import resolve_effective_features
 from transcript_workbench.utils.time import format_hms
+
+
+# Human-readable labels for the internal feature-status enum, so values like
+# "not_requested" never reach the UI verbatim.
+_FEATURE_STATUS_LABELS = {
+    FEATURE_SUPPORTED: "✓ supported",
+    FEATURE_PARTIAL: "partial",
+    FEATURE_PROXY: "proxy",
+    FEATURE_DIAGNOSTIC: "diagnostic",
+    FEATURE_UNSUPPORTED: "✗ not available",
+    FEATURE_NOT_REQUESTED: "not requested",
+}
+
+
+def _feature_label(status: str) -> str:
+    return _FEATURE_STATUS_LABELS.get(status, status.replace("_", " "))
 
 
 def _probe_uploaded_duration(uploaded_file: Any) -> float | None:
@@ -67,7 +91,11 @@ def render_configuration_section(
 ) -> tuple[str, str, RequestedFeatures]:
     """Render configuration UI and return (provider, model, requested features)."""
 
-    st.subheader("2 · Choose provider, model, and features")
+    st.subheader("2 · Choose provider, model, and features :material/tune:")
+    st.caption(
+        "Not sure what to pick? The defaults work well for most recordings — "
+        "just add a file and run."
+    )
 
     providers = list_providers()
     default_provider = (
@@ -137,30 +165,47 @@ def render_configuration_section(
         st.error(f"Unknown provider/model combination: {e}")
         return provider, model, requested
 
-    with st.expander("Capability panel", expanded=True):
-        st.markdown(
-            f"**Selected provider:** {get_provider_meta(provider)['display_name']}  \n"
-            f"**Selected model:** {model}"
+    summary = " · ".join(
+        [
+            f"Timestamps: {_feature_label(effective.timestamps)}",
+            f"Confidence: {_feature_label(effective.confidence)}",
+            f"Speakers: {_feature_label(effective.diarization)}",
+        ]
+    )
+    with st.expander(
+        f"Capabilities — {summary}", expanded=False, icon=":material/fact_check:"
+    ):
+        st.caption(
+            f"{get_provider_meta(provider)['display_name']} · {model} · "
+            f"raw output: {_feature_label(effective.save_raw)}"
         )
-        cap_col1, cap_col2, cap_col3, cap_col4 = st.columns(4)
-        cap_col1.metric("Timestamps", effective.timestamps)
-        cap_col2.metric("Confidence", effective.confidence)
-        cap_col3.metric("Diarization", effective.diarization)
-        cap_col4.metric("Raw output", effective.save_raw)
-        if warnings:
-            for w in warnings:
-                st.info(w)
+        for w in warnings:
+            st.caption(f"💡 {w}")
 
         _render_preflight_estimate(provider, model, uploaded_file)
 
     return provider, model, requested
 
 
+def preflight_caption(provider: str, model: str, source: Any) -> str:
+    """One-line run summary (duration · est. cost · model) for the Run button."""
+    parts: list[str] = []
+    duration = _probe_uploaded_duration(source)
+    if duration is not None:
+        parts.append(format_hms(duration))
+        estimate = estimate_cost(provider, model, duration)
+        if estimate is not None:
+            parts.append(
+                "free" if estimate.unit == "free" else f"est. {format_cost_usd(estimate.usd)}"
+            )
+    parts.append(model)
+    return " · ".join(parts)
+
+
 def _render_preflight_estimate(
     provider: str, model: str, uploaded_file: Any | None
 ) -> None:
     """Show duration + estimated cost before transcription runs."""
-    st.markdown("---")
     st.markdown("**Pre-flight estimate**")
 
     rule = get_pricing_rule(provider, model)
@@ -197,21 +242,20 @@ def _render_preflight_estimate(
         return
 
     estimate = estimate_cost(provider, model, duration)
-    cols = st.columns(3)
-    cols[0].metric("Duration", format_hms(duration))
     if estimate is None:
-        cols[1].metric("Estimated cost", "—")
-        cols[2].metric("Rate", "—")
-        return
-    cols[1].metric("Estimated cost", format_cost_usd(estimate.usd))
-    if estimate.unit == "free":
-        cols[2].metric("Rate", "free")
-    else:
-        cols[2].metric(
-            "Rate",
-            f"${estimate.rate_usd:.4f} / {estimate.unit.replace('_', ' ')}",
+        st.caption(
+            f"Duration {format_hms(duration)} · no cost estimate available "
+            "for this provider/model."
         )
+        return
+    st.metric("Estimated cost", format_cost_usd(estimate.usd))
+    rate = (
+        "free"
+        if estimate.unit == "free"
+        else f"${estimate.rate_usd:.4f} {estimate.unit.replace('_', ' ')}"
+    )
     st.caption(
-        "Estimates are derived from duration × published rate. The provider "
-        "does not return a billed amount; actual charges may differ slightly."
+        f"Duration {format_hms(duration)} · rate {rate} · estimated from "
+        "duration × published rate; the provider does not return a billed "
+        "amount, so actual charges may differ slightly."
     )
