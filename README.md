@@ -424,6 +424,7 @@ The dates above are placeholders for sequencing. They are not a commitment to a 
 | [`docs/UAT_CHECKLIST.md`](docs/UAT_CHECKLIST.md) | Step-by-step user acceptance test plan for the MVP |
 | [`docs/AWS_TRANSCRIBE_SETUP.md`](docs/AWS_TRANSCRIBE_SETUP.md) | AWS IAM, S3, and Transcribe setup for the post-MVP provider |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | EC2 deployment guide including custom domain and HTTPS |
+| [`docs/EMAIL_SETUP.md`](docs/EMAIL_SETUP.md) | One-time AWS SES setup for the email-a-transcript feature |
 
 Start with `REQUIREMENTS.md` to understand what the app must do. Use `IMPLEMENTATION_PLAN.md` when building. Use `USER_GUIDE.md` for the end-user experience. Use `DEPLOYMENT.md` for EC2 setup.
 

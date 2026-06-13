@@ -102,11 +102,17 @@ def main() -> None:
 
     _render_sidebar(config)
 
-    st.title("TranscriptWorkbench")
-    st.caption(
-        "Upload an audio/video file or record from your mic, "
-        "choose a provider, and transcribe."
-    )
+    # Title on the left, logo filling the blank space to its right.
+    # Placeholder graphic — swap assets/logo.svg for a real one anytime.
+    title_col, logo_col = st.columns([2, 1], vertical_alignment="center")
+    with title_col:
+        st.title("TranscriptWorkbench")
+        st.caption(
+            "Upload an audio/video file or record from your mic, "
+            "choose a provider, and transcribe."
+        )
+    with logo_col:
+        st.image("assets/logo.svg", width="stretch")
 
     uploaded_file = render_upload_section(max_upload_mb=config.max_upload_mb)
     provider, model, requested = render_configuration_section(config, uploaded_file)

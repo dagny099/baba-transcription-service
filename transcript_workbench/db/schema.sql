@@ -83,3 +83,20 @@ CREATE TABLE IF NOT EXISTS artifacts (
 
 CREATE INDEX IF NOT EXISTS idx_artifacts_job
     ON artifacts(job_id);
+
+-- Audit log of transcript emails. Doubles as the data source for the
+-- per-day send limit (EMAIL_DAILY_LIMIT) enforced before each send.
+CREATE TABLE IF NOT EXISTS email_log (
+    email_id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    recipients TEXT NOT NULL,        -- comma-separated addresses
+    attachments TEXT,                -- comma-separated attachment filenames
+    ses_message_id TEXT,             -- NULL when the send failed
+    status TEXT NOT NULL,            -- 'sent' | 'failed'
+    error TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(job_id) REFERENCES transcription_jobs(job_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_log_created_at
+    ON email_log(created_at DESC);

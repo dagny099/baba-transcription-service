@@ -25,6 +25,17 @@ class AppConfig:
     low_confidence_threshold: float
     default_provider: str
     default_model: str
+    # Email sharing (see docs/EMAIL_SETUP.md). The transport is selected by
+    # EMAIL_PROVIDER: "ses" (default) or "smtp" (e.g. Gmail app password).
+    email_provider: str
+    email_sender: str | None
+    email_recipients: list[str]
+    email_max_attachment_mb: int
+    email_daily_limit: int
+    smtp_host: str
+    smtp_port: int
+    smtp_username: str | None
+    smtp_password: str | None
     # Optional ephemeral OpenAI key entered in the Streamlit sidebar.
     # Not loaded from env. Set at runtime by the UI; not persisted.
     session_openai_api_key: str | None = None
@@ -33,6 +44,16 @@ class AppConfig:
     def effective_openai_api_key(self) -> str | None:
         """Prefer session-supplied key over env, so users can BYO at runtime."""
         return self.session_openai_api_key or self.openai_api_key
+
+    @property
+    def email_enabled(self) -> bool:
+        """Email sharing is on iff a sender, at least one recipient, and the
+        chosen transport's credentials are all configured."""
+        if not (self.email_sender and self.email_recipients):
+            return False
+        if self.email_provider == "smtp":
+            return bool(self.smtp_username and self.smtp_password)
+        return True  # SES authenticates via the ambient AWS credentials
 
 
 def get_config() -> AppConfig:
@@ -57,4 +78,18 @@ def get_config() -> AppConfig:
         low_confidence_threshold=float(os.getenv("LOW_CONFIDENCE_THRESHOLD", "0.80")),
         default_provider=os.getenv("DEFAULT_PROVIDER", "openai"),
         default_model=os.getenv("DEFAULT_MODEL", "gpt-4o-mini-transcribe"),
+        email_provider=os.getenv("EMAIL_PROVIDER", "ses").strip().lower(),
+        email_sender=os.getenv("EMAIL_SENDER") or None,
+        email_recipients=_parse_csv(os.getenv("EMAIL_RECIPIENTS", "")),
+        email_max_attachment_mb=int(os.getenv("EMAIL_MAX_ATTACHMENT_MB", "25")),
+        email_daily_limit=int(os.getenv("EMAIL_DAILY_LIMIT", "20")),
+        smtp_host=os.getenv("SMTP_HOST", "smtp.gmail.com"),
+        smtp_port=int(os.getenv("SMTP_PORT", "465")),
+        smtp_username=os.getenv("SMTP_USERNAME") or None,
+        smtp_password=os.getenv("SMTP_PASSWORD") or None,
     )
+
+
+def _parse_csv(raw: str) -> list[str]:
+    """Split a comma-separated env value into a clean list."""
+    return [item.strip() for item in raw.split(",") if item.strip()]

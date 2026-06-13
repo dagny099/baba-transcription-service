@@ -269,6 +269,54 @@ class Repository:
             ).fetchall()
         return [_row_to_dict(r) for r in rows if r is not None]
 
+    # ---- email log ----------------------------------------------------------
+
+    def insert_email_log(
+        self,
+        *,
+        job_id: str,
+        recipients: list[str],
+        attachments: list[str],
+        status: str,
+        ses_message_id: str | None = None,
+        error: str | None = None,
+    ) -> str:
+        email_id = new_id()
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO email_log (
+                    email_id, job_id, recipients, attachments,
+                    ses_message_id, status, error, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    email_id,
+                    job_id,
+                    ",".join(recipients),
+                    ",".join(attachments),
+                    ses_message_id,
+                    status,
+                    error,
+                    iso_utc(utcnow()),
+                ),
+            )
+        return email_id
+
+    def count_emails_sent_since(self, since_iso: str) -> int:
+        """Count successful sends at or after `since_iso`.
+
+        ISO 8601 UTC strings sort lexicographically, so a plain string
+        comparison is a correct time comparison here.
+        """
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) AS n FROM email_log "
+                "WHERE status = 'sent' AND created_at >= ?",
+                (since_iso,),
+            ).fetchone()
+        return int(row["n"])
+
     # ---- composite ---------------------------------------------------------
 
     def save_result(self, result: TranscriptionResult) -> None:
